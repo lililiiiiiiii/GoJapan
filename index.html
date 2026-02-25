@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GoJapan</title>
+    <title>GoJapan - 無限捲動版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -17,7 +17,7 @@
         .loader {
             border: 3px solid #e2e8f0;
             border-radius: 50%;
-            border-top: 3px solid #f43f5e; /* 改成日本紅 */
+            border-top: 3px solid #f43f5e;
             width: 24px;
             height: 24px;
             animation: spin 1s linear infinite;
@@ -39,7 +39,9 @@
             </span>
         </header>
 
-        <main class="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 relative scroll-smooth pb-24" ref="mainScroll">
+        <main class="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 relative scroll-smooth pb-24" 
+              ref="mainScroll" 
+              @scroll="handleScroll">
             
             <div v-show="currentTab === 'talk'" class="p-4 space-y-4">
                 <div class="flex overflow-x-auto gap-2 pb-2 no-scrollbar">
@@ -61,10 +63,6 @@
                         <div class="text-xs text-rose-500 font-mono mb-1">{{ item.reading }}</div>
                         <div class="text-sm text-slate-500 font-medium">{{ item.meaning }}</div>
                     </div>
-                </div>
-                
-                <div class="text-center text-gray-400 text-xs py-4">
-                    點擊卡片即可發音 🔊
                 </div>
             </div>
 
@@ -106,7 +104,7 @@
                 <div class="p-4 space-y-3 flex-1">
                     <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-gray-400">
                         <div class="loader mb-3"></div>
-                        <p class="text-sm">下載 {{ currentLevel.toUpperCase() }} 資料庫中...</p>
+                        <p class="text-sm">下載中...</p>
                     </div>
                     
                     <div v-else-if="error" class="text-center py-10 text-rose-400 text-sm px-4">
@@ -115,11 +113,12 @@
                     </div>
 
                     <div v-else>
-                        <div class="text-right text-xs text-gray-400 mb-2">
-                             共 {{ filteredVocab.length }} 個單字
+                        <div class="text-right text-xs text-gray-400 mb-2 flex justify-between px-1">
+                             <span>已顯示 {{ displayedVocab.length }} 筆</span>
+                             <span>共 {{ filteredVocab.length }} 筆</span>
                         </div>
                         
-                        <div v-for="(word, idx) in filteredVocab.slice(0, 50)" :key="idx" @click="speak(word.kana || word.kanji)"
+                        <div v-for="(word, idx) in displayedVocab" :key="idx" @click="speak(word.kana || word.kanji)"
                             class="bg-white border-l-4 border-emerald-500 p-3 pl-4 rounded-r-lg shadow-sm mb-3 flex justify-between items-start cursor-pointer active:bg-gray-50 hover:shadow-md transition-all">
                             <div class="flex-1">
                                 <div class="flex flex-col">
@@ -131,11 +130,17 @@
                             <span class="text-gray-300 ml-2 mt-1 shrink-0">🔊</span>
                         </div>
                         
-                        <div v-if="filteredVocab.length > 50" class="text-center py-6">
-                            <span class="text-xs text-gray-400 block mb-2">還有 {{ filteredVocab.length - 50 }} 個單字</span>
-                            <button class="text-xs text-rose-500 font-bold bg-rose-50 px-4 py-2 rounded-full">
-                                請使用搜尋框查找
-                            </button>
+                        <div class="text-center py-6">
+                            <div v-if="displayedVocab.length < filteredVocab.length" class="text-gray-400 text-xs">
+                                <div class="loader mx-auto w-5 h-5 border-2 mb-2"></div>
+                                滑動載入更多...
+                            </div>
+                            <div v-else-if="filteredVocab.length > 0" class="text-gray-300 text-xs">
+                                - 已經到底囉 -
+                            </div>
+                            <div v-else class="text-gray-400 text-sm">
+                                找不到符合的單字
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -169,7 +174,14 @@
                     loading: false,
                     error: null,
                     
-                    // --- 1. GoJapan 擴充會話資料庫 (手動擴充以確保品質與分類) ---
+                    // --- JLPT 相關變數 ---
+                    currentLevel: 'n5',
+                    searchQuery: '',
+                    vocabDatabase: {}, 
+                    activeVocabList: [], // 該等級所有單字
+                    pageLimit: 50,       // 當前顯示數量 (無限捲動用)
+                    
+                    // --- 1. GoJapan 會話資料 ---
                     currConvCat: 'basic',
                     conversationCats: [
                         {id: 'basic', name: '👋 基礎'}, 
@@ -180,10 +192,8 @@
                         {id: 'hotel', name: '🏨 住宿'},
                         {id: 'emergency', name: '🚑 緊急'}
                     ],
-                    // 這裡我幫您擴充到了 60+ 句常用會話
                     conversations: [
-                        // Basic
-                        { cat: 'basic', jp: 'すみません', reading: 'Sumimasen', meaning: '不好意思 / 請問' },
+                         { cat: 'basic', jp: 'すみません', reading: 'Sumimasen', meaning: '不好意思 / 請問' },
                         { cat: 'basic', jp: 'ありがとうございます', reading: 'Arigatou gozaimasu', meaning: '非常感謝' },
                         { cat: 'basic', jp: 'はい / いいえ', reading: 'Hai / Iie', meaning: '是 / 不是' },
                         { cat: 'basic', jp: '大丈夫です', reading: 'Daijoubu desu', meaning: '沒關係 / 不需要' },
@@ -191,22 +201,16 @@
                         { cat: 'basic', jp: '英語は話せますか？', reading: 'Eigo wa hanasemasu ka?', meaning: '你會說英文嗎？' },
                         { cat: 'basic', jp: 'ゆっくり話してください', reading: 'Yukkuri hanashite kudasai', meaning: '請說慢一點' },
                         { cat: 'basic', jp: 'トイレはどこですか？', reading: 'Toire wa doko desu ka?', meaning: '廁所在哪裡？' },
-                        
-                        // Airport
                         { cat: 'airport', jp: 'パスポートを見せてください', reading: 'Pasupo-to o misete kudasai', meaning: '(海關) 請出示護照' },
                         { cat: 'airport', jp: '観光です', reading: 'Kankou desu', meaning: '我是來觀光的' },
                         { cat: 'airport', jp: '荷物はどこですか？', reading: 'Nimotsu wa doko desu ka?', meaning: '行李在哪裡拿？' },
                         { cat: 'airport', jp: 'バス乗り場はどこですか？', reading: 'Basu noriba wa doko desu ka?', meaning: '巴士站在哪裡？' },
-
-                        // Transport
                         { cat: 'transport', jp: '切符売り場はどこですか？', reading: 'Kippu uriba wa doko desu ka?', meaning: '售票處在哪裡？' },
                         { cat: 'transport', jp: '新宿駅に行きたいです', reading: 'Shinjuku-eki ni ikitai desu', meaning: '我想去新宿站' },
                         { cat: 'transport', jp: 'この電車は新宿に行きますか？', reading: 'Kono densha wa Shinjuku ni ikimasu ka?', meaning: '這班車去新宿嗎？' },
                         { cat: 'transport', jp: '路線図（ろせんず）', reading: 'Rosenzu', meaning: '路線圖' },
                         { cat: 'transport', jp: 'ICカードのチャージ', reading: 'IC ka-do no cha-ji', meaning: '儲值 IC 卡' },
                         { cat: 'transport', jp: 'ここで降ります', reading: 'Koko de orimasu', meaning: '我在這下車' },
-
-                        // Food
                         { cat: 'food', jp: '一名です / 二名です', reading: 'Hitoridesu / Futari desu', meaning: '一位 / 兩位' },
                         { cat: 'food', jp: 'メニューをください', reading: 'Menyu o kudasai', meaning: '請給我菜單' },
                         { cat: 'food', jp: '英語メニューはありますか？', reading: 'Eigo menyu wa arimasu ka?', meaning: '有英文菜單嗎？' },
@@ -216,23 +220,17 @@
                         { cat: 'food', jp: 'お会計をお願いします', reading: 'Okaikei o onegaishimasu', meaning: '麻煩結帳' },
                         { cat: 'food', jp: 'クレジットカードは使えますか？', reading: 'Kurejitto ka-do wa tsukaemasu ka?', meaning: '可以刷卡嗎？' },
                         { cat: 'food', jp: 'テイクアウトできますか？', reading: 'Teiku-auto dekimasu ka?', meaning: '可以外帶嗎？' },
-
-                        // Shop
                         { cat: 'shop', jp: 'これいくらですか？', reading: 'Kore ikura desu ka?', meaning: '這個多少錢？' },
                         { cat: 'shop', jp: '試着してもいいですか？', reading: 'Shichaku shitemo ii desu ka?', meaning: '可以試穿嗎？' },
                         { cat: 'shop', jp: '大きすぎます / 小さすぎます', reading: 'Ookisugimasu / Chiisasugimasu', meaning: '太大 / 太小' },
                         { cat: 'shop', jp: '新しいのありますか？', reading: 'Atarashii no arimasu ka?', meaning: '有新的(庫存)嗎？' },
                         { cat: 'shop', jp: '免税（めんぜい）できますか？', reading: 'Menzei dekimasu ka?', meaning: '可以退稅嗎？' },
                         { cat: 'shop', jp: '袋（ふくろ）いりません', reading: 'Fukuro irimasen', meaning: '不用袋子' },
-
-                        // Hotel
                         { cat: 'hotel', jp: 'チェックインをお願いします', reading: 'Chekku-in o onegaishimasu', meaning: '我要辦理入住' },
                         { cat: 'hotel', jp: '予約しています', reading: 'Yoyaku shiteimasu', meaning: '我有預約' },
                         { cat: 'hotel', jp: '荷物を預かってもらえますか？', reading: 'Nimotsu o azukatte moraemasu ka?', meaning: '可以寄放行李嗎？' },
                         { cat: 'hotel', jp: 'Wi-Fiのパスワードは？', reading: 'Wi-Fi no pasuwa-do wa?', meaning: 'Wi-Fi 密碼是多少？' },
                         { cat: 'hotel', jp: '朝食は何時ですか？', reading: 'Choushoku wa nanji desu ka?', meaning: '早餐幾點開始？' },
-
-                        // Emergency
                         { cat: 'emergency', jp: '助けてください！', reading: 'Tasukete kudasai!', meaning: '救命 / 幫幫我！' },
                         { cat: 'emergency', jp: '警察を呼んでください', reading: 'Keisatsu o yonde kudasai', meaning: '請叫警察' },
                         { cat: 'emergency', jp: '救急車（きゅうきゅうしゃ）', reading: 'Kyuukyuusha', meaning: '救護車' },
@@ -255,11 +253,7 @@
                         { h: 'わ', k: 'ワ', r: 'wa' }, { h: '', k: '', r: '' }, { h: 'を', k: 'ヲ', r: 'wo' }, { h: '', k: '', r: '' }, { h: 'ん', k: 'ン', r: 'n' },
                     ],
 
-                    // --- 3. JLPT 資料 (Github CSV) ---
-                    currentLevel: 'n5',
-                    searchQuery: '',
-                    vocabDatabase: {}, 
-                    activeVocabList: [],
+                    // --- 3. JLPT 資料 (CSV) ---
                     sources: {
                         n5: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n5.csv',
                         n4: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n4.csv',
@@ -279,6 +273,7 @@
                         romaji: item.r
                     }));
                 },
+                // 1. 先根據搜尋字串過濾全部資料
                 filteredVocab() {
                     const q = this.searchQuery.toLowerCase().trim();
                     if (!q) return this.activeVocabList;
@@ -287,6 +282,17 @@
                         (w.kana && w.kana.includes(q)) || 
                         (w.meaning && w.meaning.toLowerCase().includes(q))
                     );
+                },
+                // 2. 再根據 pageLimit 切割出要顯示的部分
+                displayedVocab() {
+                    return this.filteredVocab.slice(0, this.pageLimit);
+                }
+            },
+            watch: {
+                // 當搜尋關鍵字改變時，重置顯示數量，避免卷軸位置怪怪的
+                searchQuery() {
+                    this.pageLimit = 50;
+                    if (this.$refs.mainScroll) this.$refs.mainScroll.scrollTop = 0;
                 }
             },
             mounted() {
@@ -311,9 +317,11 @@
                     this.currentLevel = level;
                     this.searchQuery = ''; 
                     this.error = null;
+                    this.pageLimit = 50; // 切換等級時重置
 
                     if (this.vocabDatabase[level]) {
                         this.activeVocabList = this.vocabDatabase[level];
+                        if (this.$refs.mainScroll) this.$refs.mainScroll.scrollTop = 0;
                         return;
                     }
 
@@ -324,31 +332,40 @@
                     
                     Papa.parse(url, {
                         download: true,
-                        header: true, // 🟢 關鍵修改：告訴程式第一行是標題
+                        header: true,
                         skipEmptyLines: true,
                         complete: (results) => {
-                            // results.data 會直接是物件陣列：[{expression: "...", reading: "...", meaning: "..."}]
                             const rawData = results.data;
-                            
-                            const cleanData = rawData.map(row => {
-                                // jamsinclair 的 CSV 標題是: expression, reading, meaning, tags
-                                return {
-                                    kanji: row.expression || '',
-                                    kana: row.reading || '',
-                                    meaning: row.meaning || ''
-                                };
-                            }).filter(item => item.kanji && item.kanji !== 'expression'); // 雙重保險過濾掉標題
+                            const cleanData = rawData.map(row => ({
+                                kanji: row.expression || '',
+                                kana: row.reading || '',
+                                meaning: row.meaning || ''
+                            })).filter(item => item.kanji && item.kanji !== 'expression');
 
                             this.vocabDatabase[level] = cleanData;
                             this.activeVocabList = cleanData;
                             this.loading = false;
+                            if (this.$refs.mainScroll) this.$refs.mainScroll.scrollTop = 0;
                         },
                         error: (err) => {
                             console.error(err);
-                            this.error = `無法下載 ${level.toUpperCase()} 單字庫，請檢查網路。`;
+                            this.error = `下載失敗，請檢查網路。`;
                             this.loading = false;
                         }
                     });
+                },
+                // 🚀 無限捲動核心邏輯
+                handleScroll(e) {
+                    // 如果不是在單字分頁，就不處理
+                    if (this.currentTab !== 'vocab') return;
+                    
+                    const { scrollTop, clientHeight, scrollHeight } = e.target;
+                    // 當捲動到距離底部 100px 內時，且還有更多資料沒顯示
+                    if (scrollTop + clientHeight >= scrollHeight - 100) {
+                        if (this.displayedVocab.length < this.filteredVocab.length) {
+                            this.pageLimit += 50; // 每次多載入 50 筆
+                        }
+                    }
                 }
             }
         }).mount('#app');
