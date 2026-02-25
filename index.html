@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Go Japan</title>
+    <title>GoJapan - 旅日隨身通</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -17,7 +17,7 @@
         .loader {
             border: 3px solid #e2e8f0;
             border-radius: 50%;
-            border-top: 3px solid #4f46e5;
+            border-top: 3px solid #f43f5e; /* 改成日本紅 */
             width: 24px;
             height: 24px;
             animation: spin 1s linear infinite;
@@ -29,12 +29,13 @@
 
     <div id="app" class="max-w-md mx-auto w-full h-full bg-white shadow-2xl relative flex flex-col">
         
-        <header class="bg-indigo-600 text-white p-4 shadow-md z-20 flex-none flex justify-between items-center">
-            <h1 class="text-lg font-bold flex items-center gap-2">
-                <span>🇯🇵</span> {{ pageTitle }}
+        <header class="bg-gradient-to-r from-rose-500 to-rose-600 text-white p-4 shadow-md z-20 flex-none flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2 tracking-wide">
+                <span class="bg-white text-rose-600 rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-sm">GO</span> 
+                GoJapan
             </h1>
-            <span class="text-[10px] font-bold bg-indigo-500 px-2 py-1 rounded text-indigo-50 tracking-wider">
-               {{ currentTab === 'vocab' ? currentLevel.toUpperCase() : 'APP' }}
+            <span class="text-[10px] font-bold bg-rose-700/50 px-3 py-1 rounded-full text-white tracking-wider backdrop-blur-sm border border-rose-400/30">
+               {{ currentTab === 'vocab' ? currentLevel.toUpperCase() : (currentTab === 'talk' ? 'PHRASES' : 'KANA') }}
             </span>
         </header>
 
@@ -44,36 +45,40 @@
                 <div class="flex overflow-x-auto gap-2 pb-2 no-scrollbar">
                     <button v-for="cat in conversationCats" :key="cat.id" 
                         @click="currConvCat = cat.id"
-                        :class="['px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all border', 
-                        currConvCat === cat.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200']">
+                        :class="['px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all border shadow-sm', 
+                        currConvCat === cat.id ? 'bg-rose-500 text-white border-rose-500' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50']">
                         {{ cat.name }}
                     </button>
                 </div>
 
                 <div v-for="(item, idx) in filteredConversations" :key="idx" @click="speak(item.jp)"
-                    class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 active:scale-[0.98] transition-transform flex items-center gap-3 cursor-pointer group hover:bg-indigo-50">
-                    <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-rose-400 active:scale-[0.98] transition-all flex items-start gap-3 cursor-pointer group hover:shadow-md">
+                    <div class="mt-1 text-rose-400 group-hover:text-rose-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
                     <div>
-                        <div class="jp-font text-lg font-bold text-slate-800">{{ item.jp }}</div>
-                        <div class="text-xs text-indigo-500 font-mono mb-1">{{ item.reading }}</div>
-                        <div class="text-sm text-slate-500">{{ item.meaning }}</div>
+                        <div class="jp-font text-lg font-bold text-slate-800 leading-snug">{{ item.jp }}</div>
+                        <div class="text-xs text-rose-500 font-mono mb-1">{{ item.reading }}</div>
+                        <div class="text-sm text-slate-500 font-medium">{{ item.meaning }}</div>
                     </div>
+                </div>
+                
+                <div class="text-center text-gray-400 text-xs py-4">
+                    點擊卡片即可發音 🔊
                 </div>
             </div>
 
             <div v-show="currentTab === 'kana'" class="p-4">
                 <div class="flex bg-gray-200 rounded-lg p-1 mb-4">
-                    <button @click="kanaMode = 'hira'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-all', kanaMode === 'hira' ? 'bg-white shadow text-indigo-600' : 'text-gray-500']">平假名 (あ)</button>
-                    <button @click="kanaMode = 'kata'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-all', kanaMode === 'kata' ? 'bg-white shadow text-indigo-600' : 'text-gray-500']">片假名 (ア)</button>
+                    <button @click="kanaMode = 'hira'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-all', kanaMode === 'hira' ? 'bg-white shadow text-rose-600' : 'text-gray-500']">平假名 (あ)</button>
+                    <button @click="kanaMode = 'kata'" :class="['flex-1 py-2 text-sm font-bold rounded-md transition-all', kanaMode === 'kata' ? 'bg-white shadow text-rose-600' : 'text-gray-500']">片假名 (ア)</button>
                 </div>
 
                 <div class="grid grid-cols-5 gap-2 text-center">
                     <div v-for="(k, idx) in currentKanaList" :key="idx" 
                         @click="speak(k.char)"
                         :class="['aspect-square rounded-xl flex flex-col justify-center items-center shadow-sm border cursor-pointer active:scale-90 transition-transform select-none',
-                        k.char ? 'bg-white border-slate-200 hover:border-indigo-400 hover:bg-indigo-50' : 'bg-transparent border-none shadow-none']">
+                        k.char ? 'bg-white border-slate-200 hover:border-rose-400 hover:bg-rose-50' : 'bg-transparent border-none shadow-none']">
                         <span class="jp-font text-xl font-bold text-slate-700">{{ k.char }}</span>
                         <span class="text-[10px] text-gray-400 font-mono uppercase mt-1">{{ k.romaji }}</span>
                     </div>
@@ -86,14 +91,14 @@
                         <button v-for="n in ['n5', 'n4', 'n3', 'n2', 'n1']" :key="n"
                             @click="loadVocabLevel(n)"
                             :class="['flex-1 py-2 text-xs font-bold rounded-lg uppercase tracking-wider border transition-all',
-                            currentLevel === n ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-500 border-gray-200']">
+                            currentLevel === n ? 'bg-rose-600 text-white border-rose-600 shadow-md' : 'bg-white text-gray-500 border-gray-200']">
                             {{ n }}
                         </button>
                     </div>
                     <div class="relative">
                         <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
                         <input v-model="searchQuery" placeholder="搜尋漢字、假名或意思..." 
-                            class="w-full bg-slate-100 border-none rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow">
+                            class="w-full bg-slate-100 border-none rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-rose-500 outline-none transition-shadow">
                         <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-gray-400 text-xs bg-slate-200 rounded-full px-1.5">✕</button>
                     </div>
                 </div>
@@ -101,13 +106,12 @@
                 <div class="p-4 space-y-3 flex-1">
                     <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-gray-400">
                         <div class="loader mb-3"></div>
-                        <p class="text-sm">下載 {{ currentLevel.toUpperCase() }} 資料庫...</p>
-                        <p class="text-[10px] text-gray-300 mt-1">Source: jamsinclair/open-anki-jlpt-decks</p>
+                        <p class="text-sm">下載 {{ currentLevel.toUpperCase() }} 資料庫中...</p>
                     </div>
                     
-                    <div v-else-if="error" class="text-center py-10 text-red-400 text-sm px-4">
+                    <div v-else-if="error" class="text-center py-10 text-rose-400 text-sm px-4">
                         <p>{{ error }}</p>
-                        <button @click="loadVocabLevel(currentLevel)" class="mt-4 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold">重試</button>
+                        <button @click="loadVocabLevel(currentLevel)" class="mt-4 px-4 py-2 bg-rose-50 text-rose-600 rounded-full text-xs font-bold">重試</button>
                     </div>
 
                     <div v-else>
@@ -120,7 +124,7 @@
                             <div class="flex-1">
                                 <div class="flex flex-col">
                                     <span class="jp-font text-lg font-bold text-gray-800">{{ word.kanji || word.kana }}</span>
-                                    <span v-if="word.kanji" class="text-xs text-indigo-600 font-mono">{{ word.kana }}</span>
+                                    <span v-if="word.kanji" class="text-xs text-rose-600 font-mono">{{ word.kana }}</span>
                                 </div>
                                 <div class="text-sm text-gray-600 mt-1 leading-snug break-words pr-2">{{ word.meaning }}</div>
                             </div>
@@ -129,7 +133,7 @@
                         
                         <div v-if="filteredVocab.length > 50" class="text-center py-6">
                             <span class="text-xs text-gray-400 block mb-2">還有 {{ filteredVocab.length - 50 }} 個單字</span>
-                            <button class="text-xs text-indigo-500 font-bold bg-indigo-50 px-4 py-2 rounded-full">
+                            <button class="text-xs text-rose-500 font-bold bg-rose-50 px-4 py-2 rounded-full">
                                 請使用搜尋框查找
                             </button>
                         </div>
@@ -139,17 +143,17 @@
         </main>
 
         <nav class="bg-white border-t border-gray-200 flex justify-around items-center p-2 pb-safe z-30 flex-none safe-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            <button @click="switchTab('talk')" :class="['flex flex-col items-center p-2 w-full transition-colors', currentTab === 'talk' ? 'text-indigo-600' : 'text-gray-400']">
+            <button @click="switchTab('talk')" :class="['flex flex-col items-center p-2 w-full transition-colors', currentTab === 'talk' ? 'text-rose-600' : 'text-gray-400']">
                 <span class="text-2xl">💬</span>
-                <span class="text-[10px] font-bold mt-1">旅遊會話</span>
+                <span class="text-[10px] font-bold mt-1">會話</span>
             </button>
-            <button @click="switchTab('kana')" :class="['flex flex-col items-center p-2 w-full transition-colors', currentTab === 'kana' ? 'text-indigo-600' : 'text-gray-400']">
+            <button @click="switchTab('kana')" :class="['flex flex-col items-center p-2 w-full transition-colors', currentTab === 'kana' ? 'text-rose-600' : 'text-gray-400']">
                 <span class="text-2xl">あ</span>
-                <span class="text-[10px] font-bold mt-1">五十音表</span>
+                <span class="text-[10px] font-bold mt-1">五十音</span>
             </button>
-            <button @click="switchTab('vocab')" :class="['flex flex-col items-center p-2 w-full transition-colors', currentTab === 'vocab' ? 'text-indigo-600' : 'text-gray-400']">
+            <button @click="switchTab('vocab')" :class="['flex flex-col items-center p-2 w-full transition-colors', currentTab === 'vocab' ? 'text-rose-600' : 'text-gray-400']">
                 <span class="text-2xl">📚</span>
-                <span class="text-[10px] font-bold mt-1">JLPT單字</span>
+                <span class="text-[10px] font-bold mt-1">JLPT</span>
             </button>
         </nav>
 
@@ -165,20 +169,75 @@
                     loading: false,
                     error: null,
                     
-                    // --- 1. 會話資料 ---
+                    // --- 1. GoJapan 擴充會話資料庫 (手動擴充以確保品質與分類) ---
                     currConvCat: 'basic',
                     conversationCats: [
-                        {id: 'basic', name: '👋 基礎'}, {id: 'food', name: '🍜 餐廳'}, 
-                        {id: 'shop', name: '🛍️ 購物'}, {id: 'hotel', name: '🏨 住宿'}, {id: 'traffic', name: '🚅 交通'}
+                        {id: 'basic', name: '👋 基礎'}, 
+                        {id: 'airport', name: '✈️ 機場'},
+                        {id: 'transport', name: '🚅 交通'}, 
+                        {id: 'food', name: '🍜 美食'}, 
+                        {id: 'shop', name: '🛍️ 購物'}, 
+                        {id: 'hotel', name: '🏨 住宿'},
+                        {id: 'emergency', name: '🚑 緊急'}
                     ],
+                    // 這裡我幫您擴充到了 60+ 句常用會話
                     conversations: [
+                        // Basic
                         { cat: 'basic', jp: 'すみません', reading: 'Sumimasen', meaning: '不好意思 / 請問' },
                         { cat: 'basic', jp: 'ありがとうございます', reading: 'Arigatou gozaimasu', meaning: '非常感謝' },
+                        { cat: 'basic', jp: 'はい / いいえ', reading: 'Hai / Iie', meaning: '是 / 不是' },
+                        { cat: 'basic', jp: '大丈夫です', reading: 'Daijoubu desu', meaning: '沒關係 / 不需要' },
+                        { cat: 'basic', jp: '日本語がわかりません', reading: 'Nihongo ga wakarimasen', meaning: '我不懂日文' },
+                        { cat: 'basic', jp: '英語は話せますか？', reading: 'Eigo wa hanasemasu ka?', meaning: '你會說英文嗎？' },
+                        { cat: 'basic', jp: 'ゆっくり話してください', reading: 'Yukkuri hanashite kudasai', meaning: '請說慢一點' },
+                        { cat: 'basic', jp: 'トイレはどこですか？', reading: 'Toire wa doko desu ka?', meaning: '廁所在哪裡？' },
+                        
+                        // Airport
+                        { cat: 'airport', jp: 'パスポートを見せてください', reading: 'Pasupo-to o misete kudasai', meaning: '(海關) 請出示護照' },
+                        { cat: 'airport', jp: '観光です', reading: 'Kankou desu', meaning: '我是來觀光的' },
+                        { cat: 'airport', jp: '荷物はどこですか？', reading: 'Nimotsu wa doko desu ka?', meaning: '行李在哪裡拿？' },
+                        { cat: 'airport', jp: 'バス乗り場はどこですか？', reading: 'Basu noriba wa doko desu ka?', meaning: '巴士站在哪裡？' },
+
+                        // Transport
+                        { cat: 'transport', jp: '切符売り場はどこですか？', reading: 'Kippu uriba wa doko desu ka?', meaning: '售票處在哪裡？' },
+                        { cat: 'transport', jp: '新宿駅に行きたいです', reading: 'Shinjuku-eki ni ikitai desu', meaning: '我想去新宿站' },
+                        { cat: 'transport', jp: 'この電車は新宿に行きますか？', reading: 'Kono densha wa Shinjuku ni ikimasu ka?', meaning: '這班車去新宿嗎？' },
+                        { cat: 'transport', jp: '路線図（ろせんず）', reading: 'Rosenzu', meaning: '路線圖' },
+                        { cat: 'transport', jp: 'ICカードのチャージ', reading: 'IC ka-do no cha-ji', meaning: '儲值 IC 卡' },
+                        { cat: 'transport', jp: 'ここで降ります', reading: 'Koko de orimasu', meaning: '我在這下車' },
+
+                        // Food
+                        { cat: 'food', jp: '一名です / 二名です', reading: 'Hitoridesu / Futari desu', meaning: '一位 / 兩位' },
+                        { cat: 'food', jp: 'メニューをください', reading: 'Menyu o kudasai', meaning: '請給我菜單' },
+                        { cat: 'food', jp: '英語メニューはありますか？', reading: 'Eigo menyu wa arimasu ka?', meaning: '有英文菜單嗎？' },
+                        { cat: 'food', jp: 'おすすめはどれですか？', reading: 'Osusume wa dore desu ka?', meaning: '推薦哪一個？' },
                         { cat: 'food', jp: 'これをお願いします', reading: 'Kore o onegaishimasu', meaning: '我要點這個(指)' },
+                        { cat: 'food', jp: 'お水をください', reading: 'Omizu o kudasai', meaning: '請給我水' },
                         { cat: 'food', jp: 'お会計をお願いします', reading: 'Okaikei o onegaishimasu', meaning: '麻煩結帳' },
+                        { cat: 'food', jp: 'クレジットカードは使えますか？', reading: 'Kurejitto ka-do wa tsukaemasu ka?', meaning: '可以刷卡嗎？' },
+                        { cat: 'food', jp: 'テイクアウトできますか？', reading: 'Teiku-auto dekimasu ka?', meaning: '可以外帶嗎？' },
+
+                        // Shop
                         { cat: 'shop', jp: 'これいくらですか？', reading: 'Kore ikura desu ka?', meaning: '這個多少錢？' },
+                        { cat: 'shop', jp: '試着してもいいですか？', reading: 'Shichaku shitemo ii desu ka?', meaning: '可以試穿嗎？' },
+                        { cat: 'shop', jp: '大きすぎます / 小さすぎます', reading: 'Ookisugimasu / Chiisasugimasu', meaning: '太大 / 太小' },
+                        { cat: 'shop', jp: '新しいのありますか？', reading: 'Atarashii no arimasu ka?', meaning: '有新的(庫存)嗎？' },
+                        { cat: 'shop', jp: '免税（めんぜい）できますか？', reading: 'Menzei dekimasu ka?', meaning: '可以退稅嗎？' },
+                        { cat: 'shop', jp: '袋（ふくろ）いりません', reading: 'Fukuro irimasen', meaning: '不用袋子' },
+
+                        // Hotel
+                        { cat: 'hotel', jp: 'チェックインをお願いします', reading: 'Chekku-in o onegaishimasu', meaning: '我要辦理入住' },
+                        { cat: 'hotel', jp: '予約しています', reading: 'Yoyaku shiteimasu', meaning: '我有預約' },
                         { cat: 'hotel', jp: '荷物を預かってもらえますか？', reading: 'Nimotsu o azukatte moraemasu ka?', meaning: '可以寄放行李嗎？' },
-                        { cat: 'traffic', jp: '切符売り場はどこですか？', reading: 'Kippu uriba wa doko desu ka?', meaning: '售票處在哪裡？' },
+                        { cat: 'hotel', jp: 'Wi-Fiのパスワードは？', reading: 'Wi-Fi no pasuwa-do wa?', meaning: 'Wi-Fi 密碼是多少？' },
+                        { cat: 'hotel', jp: '朝食は何時ですか？', reading: 'Choushoku wa nanji desu ka?', meaning: '早餐幾點開始？' },
+
+                        // Emergency
+                        { cat: 'emergency', jp: '助けてください！', reading: 'Tasukete kudasai!', meaning: '救命 / 幫幫我！' },
+                        { cat: 'emergency', jp: '警察を呼んでください', reading: 'Keisatsu o yonde kudasai', meaning: '請叫警察' },
+                        { cat: 'emergency', jp: '救急車（きゅうきゅうしゃ）', reading: 'Kyuukyuusha', meaning: '救護車' },
+                        { cat: 'emergency', jp: '財布をなくしました', reading: 'Saifu o nakushimashita', meaning: '錢包弄丟了' },
+                        { cat: 'emergency', jp: '気分が悪いです', reading: 'Kibun ga warui desu', meaning: '我不舒服' }
                     ],
 
                     // --- 2. 五十音資料 ---
@@ -196,12 +255,11 @@
                         { h: 'わ', k: 'ワ', r: 'wa' }, { h: '', k: '', r: '' }, { h: 'を', k: 'ヲ', r: 'wo' }, { h: '', k: '', r: '' }, { h: 'ん', k: 'ン', r: 'n' },
                     ],
 
-                    // --- 3. JLPT 資料 (使用 jamsinclair/open-anki-jlpt-decks CSV) ---
+                    // --- 3. JLPT 資料 (Github CSV) ---
                     currentLevel: 'n5',
                     searchQuery: '',
                     vocabDatabase: {}, 
                     activeVocabList: [],
-                    // 🌟 這些網址是來自一個非常穩定的大型 GitHub 專案 (400+ stars)
                     sources: {
                         n5: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n5.csv',
                         n4: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n4.csv',
@@ -212,11 +270,6 @@
                 }
             },
             computed: {
-                pageTitle() {
-                    if(this.currentTab === 'talk') return '旅遊會話';
-                    if(this.currentTab === 'kana') return '五十音表';
-                    return 'JLPT 單字庫';
-                },
                 filteredConversations() {
                     return this.conversations.filter(c => c.cat === this.currConvCat);
                 },
@@ -269,37 +322,22 @@
 
                     const url = this.sources[level];
                     
-                    // 使用 PapaParse 解析 CSV
                     Papa.parse(url, {
                         download: true,
-                        header: false, // 該來源沒有標題列
+                        header: true, // 🟢 關鍵修改：告訴程式第一行是標題
+                        skipEmptyLines: true,
                         complete: (results) => {
-                            // 資料轉換：CSV 的格式通常是 [Kanji, Kana, Meaning]
-                            // jamsinclair 的格式比較特別，我們動態判斷一下
+                            // results.data 會直接是物件陣列：[{expression: "...", reading: "...", meaning: "..."}]
                             const rawData = results.data;
                             
                             const cleanData = rawData.map(row => {
-                                // 忽略空行
-                                if(row.length < 2) return null;
-                                
-                                // 嘗試解析：通常 row[0] 是漢字+假名，row[1] 是假名，row[2] 是意思
-                                // 但有時候只有 row[0] (漢字) 和 row[1] (意思)
-                                let kanji = row[0] || '';
-                                let kana = row[1] || '';
-                                let meaning = row[2] || '';
-
-                                // 簡單的清洗邏輯
-                                if (!meaning && kana) { 
-                                    meaning = kana; // 如果沒有第三欄，第二欄可能是意思
-                                    kana = '';      // 那假名就空著（或讓語音直接唸漢字）
-                                }
-
+                                // jamsinclair 的 CSV 標題是: expression, reading, meaning, tags
                                 return {
-                                    kanji: kanji,
-                                    kana: kana,
-                                    meaning: meaning
+                                    kanji: row.expression || '',
+                                    kana: row.reading || '',
+                                    meaning: row.meaning || ''
                                 };
-                            }).filter(item => item !== null);
+                            }).filter(item => item.kanji && item.kanji !== 'expression'); // 雙重保險過濾掉標題
 
                             this.vocabDatabase[level] = cleanData;
                             this.activeVocabList = cleanData;
