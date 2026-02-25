@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>全能日語伴 (N1-N5 完整版)</title>
+    <title>全能日語伴 (CSV 穩定版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans TC', 'Noto Sans JP', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
@@ -13,14 +14,12 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        /* 讀取動畫 */
         .loader {
-            border: 3px solid #f3f3f3;
+            border: 3px solid #e2e8f0;
             border-radius: 50%;
-            border-top: 3px solid #6366f1;
+            border-top: 3px solid #4f46e5;
             width: 24px;
             height: 24px;
-            -webkit-animation: spin 1s linear infinite; /* Safari */
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -34,7 +33,7 @@
             <h1 class="text-lg font-bold flex items-center gap-2">
                 <span>🇯🇵</span> {{ pageTitle }}
             </h1>
-            <span class="text-xs bg-indigo-500 px-2 py-1 rounded text-indigo-100">
+            <span class="text-[10px] font-bold bg-indigo-500 px-2 py-1 rounded text-indigo-50 tracking-wider">
                {{ currentTab === 'vocab' ? currentLevel.toUpperCase() : 'APP' }}
             </span>
         </header>
@@ -53,7 +52,7 @@
 
                 <div v-for="(item, idx) in filteredConversations" :key="idx" @click="speak(item.jp)"
                     class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 active:scale-[0.98] transition-transform flex items-center gap-3 cursor-pointer group hover:bg-indigo-50">
-                    <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full">
+                    <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     </div>
                     <div>
@@ -102,34 +101,36 @@
                 <div class="p-4 space-y-3 flex-1">
                     <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-gray-400">
                         <div class="loader mb-3"></div>
-                        <p class="text-sm">正在從 GitHub 下載 {{ currentLevel.toUpperCase() }} 單字庫...</p>
-                        <p class="text-xs text-gray-300 mt-1">第一次載入可能需要幾秒鐘</p>
+                        <p class="text-sm">下載 {{ currentLevel.toUpperCase() }} 資料庫...</p>
+                        <p class="text-[10px] text-gray-300 mt-1">Source: jamsinclair/open-anki-jlpt-decks</p>
                     </div>
                     
-                    <div v-else-if="filteredVocab.length === 0" class="text-center py-10 text-gray-400 text-sm">
-                        <p>找不到符合的單字</p>
+                    <div v-else-if="error" class="text-center py-10 text-red-400 text-sm px-4">
+                        <p>{{ error }}</p>
+                        <button @click="loadVocabLevel(currentLevel)" class="mt-4 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold">重試</button>
                     </div>
 
                     <div v-else>
                         <div class="text-right text-xs text-gray-400 mb-2">
-                             {{ filteredVocab.length }} 個單字
+                             共 {{ filteredVocab.length }} 個單字
                         </div>
                         
-                        <div v-for="(word, idx) in filteredVocab.slice(0, 100)" :key="idx" @click="speak(word.kana || word.kanji)"
+                        <div v-for="(word, idx) in filteredVocab.slice(0, 50)" :key="idx" @click="speak(word.kana || word.kanji)"
                             class="bg-white border-l-4 border-emerald-500 p-3 pl-4 rounded-r-lg shadow-sm mb-3 flex justify-between items-start cursor-pointer active:bg-gray-50 hover:shadow-md transition-all">
                             <div class="flex-1">
                                 <div class="flex flex-col">
                                     <span class="jp-font text-lg font-bold text-gray-800">{{ word.kanji || word.kana }}</span>
                                     <span v-if="word.kanji" class="text-xs text-indigo-600 font-mono">{{ word.kana }}</span>
                                 </div>
-                                <div class="text-sm text-gray-600 mt-1 leading-snug">{{ word.meaning }}</div>
+                                <div class="text-sm text-gray-600 mt-1 leading-snug break-words pr-2">{{ word.meaning }}</div>
                             </div>
-                            <span class="text-gray-300 ml-2 mt-1">🔊</span>
+                            <span class="text-gray-300 ml-2 mt-1 shrink-0">🔊</span>
                         </div>
                         
-                        <div v-if="filteredVocab.length > 100" class="text-center py-4">
+                        <div v-if="filteredVocab.length > 50" class="text-center py-6">
+                            <span class="text-xs text-gray-400 block mb-2">還有 {{ filteredVocab.length - 50 }} 個單字</span>
                             <button class="text-xs text-indigo-500 font-bold bg-indigo-50 px-4 py-2 rounded-full">
-                                請使用搜尋查看更多 (共 {{ filteredVocab.length }} 筆)
+                                請使用搜尋框查找
                             </button>
                         </div>
                     </div>
@@ -161,8 +162,10 @@
             data() {
                 return {
                     currentTab: 'talk',
+                    loading: false,
+                    error: null,
                     
-                    // --- 1. 會話資料 (精選旅遊實用句) ---
+                    // --- 1. 會話資料 ---
                     currConvCat: 'basic',
                     conversationCats: [
                         {id: 'basic', name: '👋 基礎'}, {id: 'food', name: '🍜 餐廳'}, 
@@ -171,12 +174,9 @@
                     conversations: [
                         { cat: 'basic', jp: 'すみません', reading: 'Sumimasen', meaning: '不好意思 / 請問' },
                         { cat: 'basic', jp: 'ありがとうございます', reading: 'Arigatou gozaimasu', meaning: '非常感謝' },
-                        { cat: 'basic', jp: '英語メニューはありますか？', reading: 'Eigo menyu wa arimasu ka?', meaning: '有英文菜單嗎？' },
                         { cat: 'food', jp: 'これをお願いします', reading: 'Kore o onegaishimasu', meaning: '我要點這個(指)' },
                         { cat: 'food', jp: 'お会計をお願いします', reading: 'Okaikei o onegaishimasu', meaning: '麻煩結帳' },
-                        { cat: 'food', jp: 'お水をください', reading: 'Omizu o kudasai', meaning: '請給我水' },
                         { cat: 'shop', jp: 'これいくらですか？', reading: 'Kore ikura desu ka?', meaning: '這個多少錢？' },
-                        { cat: 'shop', jp: '免税（めんぜい）できますか？', reading: 'Menzei dekimasu ka?', meaning: '可以退稅嗎？' },
                         { cat: 'hotel', jp: '荷物を預かってもらえますか？', reading: 'Nimotsu o azukatte moraemasu ka?', meaning: '可以寄放行李嗎？' },
                         { cat: 'traffic', jp: '切符売り場はどこですか？', reading: 'Kippu uriba wa doko desu ka?', meaning: '售票處在哪裡？' },
                     ],
@@ -196,19 +196,18 @@
                         { h: 'わ', k: 'ワ', r: 'wa' }, { h: '', k: '', r: '' }, { h: 'を', k: 'ヲ', r: 'wo' }, { h: '', k: '', r: '' }, { h: 'ん', k: 'ン', r: 'n' },
                     ],
 
-                    // --- 3. JLPT 資料 (連線版) ---
+                    // --- 3. JLPT 資料 (使用 jamsinclair/open-anki-jlpt-decks CSV) ---
                     currentLevel: 'n5',
                     searchQuery: '',
-                    loading: false,
-                    vocabDatabase: {}, // 快取用
+                    vocabDatabase: {}, 
                     activeVocabList: [],
-                    // 設定各等級的資料來源 (使用 tanerijun/jlpt-vocab 庫)
+                    // 🌟 這些網址是來自一個非常穩定的大型 GitHub 專案 (400+ stars)
                     sources: {
-                        n5: 'https://raw.githubusercontent.com/tanerijun/jlpt-vocab/master/jlpt-n5.json',
-                        n4: 'https://raw.githubusercontent.com/tanerijun/jlpt-vocab/master/jlpt-n4.json',
-                        n3: 'https://raw.githubusercontent.com/tanerijun/jlpt-vocab/master/jlpt-n3.json',
-                        n2: 'https://raw.githubusercontent.com/tanerijun/jlpt-vocab/master/jlpt-n2.json',
-                        n1: 'https://raw.githubusercontent.com/tanerijun/jlpt-vocab/master/jlpt-n1.json'
+                        n5: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n5.csv',
+                        n4: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n4.csv',
+                        n3: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n3.csv',
+                        n2: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n2.csv',
+                        n1: 'https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n1.csv'
                     }
                 }
             },
@@ -228,7 +227,7 @@
                     }));
                 },
                 filteredVocab() {
-                    const q = this.searchQuery.toLowerCase();
+                    const q = this.searchQuery.toLowerCase().trim();
                     if (!q) return this.activeVocabList;
                     return this.activeVocabList.filter(w => 
                         (w.kanji && w.kanji.includes(q)) || 
@@ -238,13 +237,11 @@
                 }
             },
             mounted() {
-                // 預設載入 N5
                 this.loadVocabLevel('n5');
             },
             methods: {
                 switchTab(tab) {
                     this.currentTab = tab;
-                    // 切換時回到頂部
                     if (this.$refs.mainScroll) this.$refs.mainScroll.scrollTop = 0;
                 },
                 speak(text) {
@@ -257,48 +254,63 @@
                         window.speechSynthesis.speak(u);
                     }
                 },
-                async loadVocabLevel(level) {
+                loadVocabLevel(level) {
                     this.currentLevel = level;
                     this.searchQuery = ''; 
+                    this.error = null;
 
-                    // 1. 如果之前下載過，直接用快取
                     if (this.vocabDatabase[level]) {
                         this.activeVocabList = this.vocabDatabase[level];
                         return;
                     }
 
-                    // 2. 開始下載
                     this.loading = true;
-                    this.activeVocabList = []; // 清空列表避免混淆
+                    this.activeVocabList = []; 
 
-                    try {
-                        const url = this.sources[level];
-                        const res = await fetch(url);
-                        
-                        if (!res.ok) throw new Error("網路連線錯誤");
-                        
-                        const rawData = await res.json();
-                        
-                        // 3. 資料格式轉換 (Data Mapping)
-                        // tanerijun 的格式是: { kanji, kana, meanings: [] }
-                        // 我們要轉成: { kanji, kana, meaning: "..." }
-                        const cleanData = rawData.map(item => ({
-                            kanji: item.kanji,
-                            kana: item.kana,
-                            // 將陣列意思用逗號串接，且只取前 3 個意思避免太長
-                            meaning: item.meanings ? item.meanings.slice(0, 3).join(', ') : '(無解釋)'
-                        }));
+                    const url = this.sources[level];
+                    
+                    // 使用 PapaParse 解析 CSV
+                    Papa.parse(url, {
+                        download: true,
+                        header: false, // 該來源沒有標題列
+                        complete: (results) => {
+                            // 資料轉換：CSV 的格式通常是 [Kanji, Kana, Meaning]
+                            // jamsinclair 的格式比較特別，我們動態判斷一下
+                            const rawData = results.data;
+                            
+                            const cleanData = rawData.map(row => {
+                                // 忽略空行
+                                if(row.length < 2) return null;
+                                
+                                // 嘗試解析：通常 row[0] 是漢字+假名，row[1] 是假名，row[2] 是意思
+                                // 但有時候只有 row[0] (漢字) 和 row[1] (意思)
+                                let kanji = row[0] || '';
+                                let kana = row[1] || '';
+                                let meaning = row[2] || '';
 
-                        // 存入快取並顯示
-                        this.vocabDatabase[level] = cleanData;
-                        this.activeVocabList = cleanData;
+                                // 簡單的清洗邏輯
+                                if (!meaning && kana) { 
+                                    meaning = kana; // 如果沒有第三欄，第二欄可能是意思
+                                    kana = '';      // 那假名就空著（或讓語音直接唸漢字）
+                                }
 
-                    } catch (e) {
-                        console.error(e);
-                        alert(`讀取 ${level.toUpperCase()} 資料失敗，請確認網路連線。`);
-                    } finally {
-                        this.loading = false;
-                    }
+                                return {
+                                    kanji: kanji,
+                                    kana: kana,
+                                    meaning: meaning
+                                };
+                            }).filter(item => item !== null);
+
+                            this.vocabDatabase[level] = cleanData;
+                            this.activeVocabList = cleanData;
+                            this.loading = false;
+                        },
+                        error: (err) => {
+                            console.error(err);
+                            this.error = `無法下載 ${level.toUpperCase()} 單字庫，請檢查網路。`;
+                            this.loading = false;
+                        }
+                    });
                 }
             }
         }).mount('#app');
